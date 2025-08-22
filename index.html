@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raj’s Personal Timetable • S7</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1630; --muted:#8aa0c7; --fg:#ecf2ff; --accent:#7cf7c6;
+      --grid:#1a2242; --chip:#152042;
+      --cs8018:#6ae3ff; --cs8004:#f6b17a; --me8033:#a9ff7c; --oe4m76:#e48bff; --lab:#7fd3ff;
+    }
+    [data-theme="light"]{
+      --bg:#f7f9ff; --panel:#ffffff; --muted:#557099; --fg:#0e1326; --accent:#1256ff;
+      --grid:#e8eefc; --chip:#eef3ff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; color:var(--fg); background:radial-gradient(1200px 600px at 10% -10%, #21305a 0%, transparent 60%),radial-gradient(900px 500px at 120% 10%, #1d2b53 0%, transparent 60%),var(--bg);
+    }
+    .wrap{max-width:1100px; margin:24px auto; padding:16px}
+    header{display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:16px}
+    h1{font-size:clamp(22px,3.8vw,34px); margin:0; letter-spacing:0.4px}
+    .subtitle{opacity:.75; font-weight:600}
+    .controls{display:flex; flex-wrap:wrap; gap:10px}
+    button,.seg,select{border:1px solid transparent; padding:10px 14px; border-radius:12px; color:var(--fg); background:var(--panel); box-shadow:0 6px 20px rgba(0,0,0,.12); cursor:pointer}
+    button:hover,.seg:hover,select:hover{transform:translateY(-1px)}
+    .seg{display:flex; gap:6px; align-items:center}
+    .pill{display:inline-flex; align-items:center; gap:8px; background:var(--chip); padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.06)}
+    .legend{display:flex; gap:8px; flex-wrap:wrap}
+    .dot{width:10px; height:10px; border-radius:50%}
+
+    .calendar{display:grid; grid-template-columns:120px repeat(5, 1fr); gap:1px; background:var(--grid); border-radius:16px; overflow:hidden; border:1px solid var(--grid)}
+    .cell{background:var(--panel); padding:10px 12px; min-height:62px}
+    .head{font-weight:800; text-transform:uppercase; letter-spacing:.08em; font-size:12px; color:var(--muted); background:linear-gradient(180deg, rgba(255,255,255,.04), transparent); position:sticky; top:0; z-index:2}
+    .slot{position:relative}
+    .time{color:var(--muted); font-weight:600}
+
+    .event{position:absolute; left:8px; right:8px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.12); backdrop-filter: blur(4px);
+      box-shadow:0 10px 24px rgba(0,0,0,.18); overflow:hidden}
+    .event small{display:block; opacity:.85}
+    .event .title{font-weight:800; letter-spacing:.2px}
+    .c-cs8018{background:linear-gradient(160deg, var(--cs8018), rgba(106,227,255,.2)); color:#0b1a22}
+    .c-cs8004{background:linear-gradient(160deg, var(--cs8004), rgba(246,177,122,.15)); color:#211608}
+    .c-me8033{background:linear-gradient(160deg, var(--me8033), rgba(169,255,124,.12)); color:#10210b}
+    .c-oe4m76{background:linear-gradient(160deg, var(--oe4m76), rgba(228,139,255,.12)); color:#210b24}
+    .c-lab{background:linear-gradient(160deg, var(--lab), rgba(127,211,255,.12)); color:#0b1a22}
+
+    .list-item.c-cs8018{background:linear-gradient(160deg, var(--cs8018), rgba(106,227,255,.2)); color:#0b1a22}
+    .list-item.c-cs8004{background:linear-gradient(160deg, var(--cs8004), rgba(246,177,122,.15)); color:#211608}
+    .list-item.c-me8033{background:linear-gradient(160deg, var(--me8033), rgba(169,255,124,.12)); color:#10210b}
+    .list-item.c-oe4m76{background:linear-gradient(160deg, var(--oe4m76), rgba(228,139,255,.12)); color:#210b24}
+    .list-item.c-lab{background:linear-gradient(160deg, var(--lab), rgba(127,211,255,.12)); color:#0b1a22}
+
+    .li-day { margin-top: 16px; }
+    .li-day h3 { margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-size: 14px; }
+
+    .grid-wrap{position:relative}
+    .hour-line{position:absolute; left:120px; right:0; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); filter:drop-shadow(0 0 10px var(--accent)); opacity:.8}
+
+    .status-bar { background: var(--panel); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.12); display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center; text-align: center; }
+    .status-item { background: var(--chip); padding: 12px 20px; border-radius: 12px; font-weight: 600; }
+    .status-item.current { color: #ff4500; border: 2px solid #ff4500; animation: pulse 2s infinite; }
+    .status-item.upcoming { color: #00ff00; border: 2px solid #00ff00; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .no-class { color: var(--muted); }
+
+    @media (max-width: 860px){
+      .calendar{grid-template-columns:1fr}
+      .cell.head{position:static}
+      .list-view{display:grid; gap:10px; margin-top:10px}
+      .list-item{background:var(--panel); border:1px solid var(--grid); border-radius:16px; padding:12px}
+      .li-top{display:flex; justify-content:space-between; font-weight:700}
+      .li-bottom{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; color:var(--muted)}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Raj’s Personal Timetable – Semester 7</h1>
+        <div class="subtitle">Corrected schedule with CS8018 • CS8004 • ME8033 • OE4M76</div>
+      </div>
+      <div class="controls">
+        <button id="todayBtn" class="seg" title="Scroll to today">📍 Today</button>
+        <button id="toggleTheme" class="seg" title="Toggle theme">🌓 Theme</button>
+        <button id="exportAll" class="seg" title="Export iCal for all classes">📆 Export .ics</button>
+      </div>
+    </header>
+
+    <div id="status" class="status-bar">
+      <div id="currentStatus" class="status-item current">Current Class: Loading...</div>
+      <div id="upcomingStatus" class="status-item upcoming">Upcoming Class: Loading...</div>
+    </div>
+
+    <section style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin:10px 0 16px">
+      <div class="legend">
+        <span class="pill"><span class="dot" style="background:var(--cs8004)"></span> CS8004 • Deep Learning</span>
+        <span class="pill"><span class="dot" style="background:var(--cs8018)"></span> CS8018 • Web Mining</span>
+        <span class="pill"><span class="dot" style="background:var(--me8033)"></span> ME8033 • AI & ML</span>
+        <span class="pill"><span class="dot" style="background:var(--oe4m76)"></span> OE4M76 • Digital Twins</span>
+        <span class="pill"><span class="dot" style="background:var(--lab)"></span> Labs</span>
+      </div>
+      <div class="pill">Week of: <span id="wk"></span></div>
+    </section>
+
+    <div class="grid-wrap">
+      <div id="hourLine" class="hour-line" style="display:none"></div>
+      <div id="calendar" class="calendar"></div>
+    </div>
+
+    <div id="listView" class="list-view" style="display:none"></div>
+
+    <p style="margin-top:16px; color:var(--muted)">Tip: Click any card to export a single-class .ics. Works offline too 🔥</p>
+  </div>
+
+<script>
+const classes = [
+  { code:'CS8004', title:'Deep Learning & Applications', prof:'AO', day:1, start:'09:00', end:'09:55', room:'L206', color:'c-cs8004'},
+  { code:'CS8018', title:'Web Mining', prof:'ACP', day:1, start:'15:00', end:'15:55', room:'L107', color:'c-cs8018'},
+  { code:'ME8033', title:'AI & ML for Engineering', prof:'PT', day:1, start:'16:00', end:'16:55', room:'CR101', color:'c-me8033'},
+  { code:'OE4M76', title:'Digital Twins in Manufacturing', prof:'SKS', day:1, start:'17:00', end:'17:55', room:'CR208', color:'c-oe4m76'},
+
+  { code:'CS8004L', title:'Deep Learning Lab', prof:'AO', day:2, start:'14:00', end:'15:55', room:'CSE-2F', color:'c-lab'},
+
+  { code:'CS8018', title:'Web Mining', prof:'ACP', day:3, start:'11:00', end:'11:55', room:'L107', color:'c-cs8018'},
+  { code:'OE4M76', title:'Digital Twins in Manufacturing', prof:'SKS', day:3, start:'16:00', end:'16:55', room:'CR202', color:'c-oe4m76'},
+  { code:'ME8033', title:'AI & ML for Engineering', prof:'PT', day:3, start:'17:00', end:'17:55', room:'CR101', color:'c-me8033'},
+
+  { code:'CS8004', title:'Deep Learning & Applications', prof:'AO', day:4, start:'10:00', end:'10:55', room:'CR107', color:'c-cs8004'},
+  { code:'OE4M76L', title:'Digital Twins Lab', prof:'SKS', day:4, start:'14:00', end:'15:55', room:'LAB', color:'c-lab'},
+  { code:'ME8033L', title:'AI & ML Lab', prof:'PT', day:4, start:'16:00', end:'17:55', room:'CC-GF', color:'c-lab'},
+
+  { code:'OE4M76', title:'Digital Twins in Manufacturing', prof:'SKS', day:5, start:'11:00', end:'11:55', room:'CR202', color:'c-oe4m76'},
+];
+
+const days = [null,'Monday','Tuesday','Wednesday','Thursday','Friday'];
+const startHour = 9; 
+const endHour   = 18;
+
+const cal = document.getElementById('calendar');
+const listView = document.getElementById('listView');
+
+function buildGrid(){
+  cal.innerHTML = '';
+  const headTime = el('div','cell head','Time'); cal.appendChild(headTime);
+  for(let d=1; d<=5; d++) cal.appendChild(el('div','cell head', days[d]));
+  for(let h=startHour; h<endHour; h++){
+    const pad = n => n.toString().padStart(2, '0');
+    const label = `${pad(h)}:00 - ${pad(h+1)}:00`;
+    cal.appendChild(el('div','cell time', label));
+    for(let d=1; d<=5; d++){
+      const slot = el('div','cell slot');
+      slot.dataset.day = d; slot.dataset.hour = h;
+      cal.appendChild(slot);
+    }
+  }
+}
+
+function placeEvents(){
+  classes.forEach(e => {
+    const h = +e.start.split(':')[0];
+    const slot = [...cal.querySelectorAll('.slot')].find(s => +s.dataset.day===e.day && +s.dataset.hour===h);
+    if(!slot) return;
+    const ev = el('div',`event ${e.color}`);
+    ev.innerHTML = `<div class="title">${e.code} • ${e.title}</div>
+                    <small>⏰ ${e.start}–${e.end} • 📍 ${e.room} • 👨‍🏫 ${e.prof}</small>`;
+    const mins = durMins(e.start,e.end);
+    const relTop = (+e.start.split(':')[1])/60 * 62;
+    ev.style.top = (relTop+4)+'px';
+    ev.style.height = (mins/60*62 - 8)+'px';
+    ev.style.cursor = 'pointer';
+    ev.title = 'Click to export .ics';
+    ev.onclick = () => downloadICS([e]);
+    slot.style.position='relative';
+    slot.appendChild(ev);
+  });
+}
+
+function buildListView(){
+  listView.innerHTML = '';
+  for(let d=1; d<=5; d++){
+    const dayEvents = classes.filter(e => e.day === d).sort((a,b) => a.start.localeCompare(b.start));
+    if(!dayEvents.length) continue;
+    const dayEl = el('div', 'li-day');
+    dayEl.dataset.day = d;
+    const dayHeader = el('h3', '', days[d]);
+    dayEl.appendChild(dayHeader);
+    dayEvents.forEach(e => {
+      const li = el('div', 'list-item ' + e.color);
+      li.innerHTML = `<div class="li-top"><span>${e.code}</span><span>${e.start}–${e.end}</span></div>
+                      <div class="li-bottom"><span>${e.title}</span> • <span>${e.room}</span> • <span>${e.prof}</span></div>`;
+      li.style.cursor = 'pointer';
+      li.onclick = () => downloadICS([e]);
+      dayEl.appendChild(li);
+    });
+    listView.appendChild(dayEl);
+  }
+}
+
+function todayMarker(){
+  const now = new Date();
+  const d = now.getDay();
+  const hour = now.getHours()+ now.getMinutes()/60;
+  const oy = document.getElementById('hourLine');
+  if(d>=1 && d<=5 && hour>=startHour && hour<=endHour){
+    const rowIdx = Math.floor(hour) - startHour + 1;
+    const y = 62*rowIdx + (hour%1)*62 + 32;
+    oy.style.top = y+'px';
+    oy.style.display = 'block';
+  }
+}
+
+function updateWeekLabel(){
+  const now = new Date();
+  const monday = new Date(now);
+  const day = (now.getDay()+6)%7;
+  monday.setDate(now.getDate()-day);
+  const friday = new Date(monday); friday.setDate(monday.getDate()+4);
+  document.getElementById('wk').textContent = `${fmtDate(monday)} – ${fmtDate(friday)}`;
+}
+
+function el(tag, cls, txt){ const n=document.createElement(tag); if(cls) n.className=cls; if(txt) n.textContent=txt; return n; }
+function durMins(a,b){ const [ah,am]=a.split(':').map(Number); const [bh,bm]=b.split(':').map(Number); return (bh*60+bm)-(ah*60+am); }
+function fmtDate(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+
+function downloadICS(evts){
+  const pad = n=> String(n).padStart(2,'0');
+  const dt = new Date();
+  const nextMon = new Date(dt);
+  const diff = (dt.getDay()+6)%7;
+  nextMon.setDate(dt.getDate()-diff);
+  nextMon.setHours(0,0,0,0);
+
+  const lines = [ 'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Raj Timetable//IN//' ];
+  for(const e of evts){
+    const d = new Date(nextMon); d.setDate(nextMon.getDate()+(e.day-1));
+    const [sh,sm]=e.start.split(':').map(Number); const [eh,em]=e.end.split(':').map(Number);
+    const s = new Date(d); s.setHours(sh,sm,0,0);
+    const f = new Date(d); f.setHours(eh,em,0,0);
+    const stamp = x=> `${x.getUTCFullYear()}${pad(x.getUTCMonth()+1)}${pad(x.getUTCDate())}T${pad(x.getUTCHours())}${pad(x.getUTCMinutes())}00Z`;
+
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${crypto.randomUUID()}`,
+      `DTSTAMP:${stamp(new Date())}`,
+      `DTSTART:${stamp(s)}`,
+      `DTEND:${stamp(f)}`,
+      `SUMMARY:${e.code} • ${e.title}`,
+      `DESCRIPTION:Room ${e.room} • Prof ${e.prof}`,
+      `LOCATION:${e.room}`,
+      'RRULE:FREQ=WEEKLY;COUNT=12',
+      'END:VEVENT'
+    );
+  }
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n')], {type:'text/calendar'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='Raj_S7_Timetable.ics'; a.click(); URL.revokeObjectURL(url);
+}
+
+const themeBtn = document.getElementById('toggleTheme');
+const todayBtn = document.getElementById('todayBtn');
+const exportAllBtn = document.getElementById('exportAll');
+
+document.body.dataset.theme = (localStorage.getItem('theme')|| (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'));
+
+themeBtn.onclick = ()=>{
+  const next = document.body.dataset.theme==='light'?'dark':'light';
+  document.body.dataset.theme = next; localStorage.setItem('theme',next);
+}
+exportAllBtn.onclick = ()=> downloadICS(classes);
+
+todayBtn.onclick = ()=>{
+  const now = new Date();
+  const d = now.getDay();
+  if(d<1 || d>5) { window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(window.matchMedia('(max-width: 860px)').matches){
+    const dayEl = listView.querySelector(`.li-day[data-day="${d}"]`);
+    if(dayEl) dayEl.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }else{
+    const hour = now.getHours();
+    const idx = (hour - startHour);
+    const y = Math.max(0, idx*62 -40);
+    window.scrollTo({top:y, behavior:'smooth'});
+  }
+}
+
+// ===== Init =====
+buildGrid();
+placeEvents();
+buildListView();
+todayMarker();
+updateWeekLabel();
+
+// Responsive toggle list view
+const mq = window.matchMedia('(max-width: 860px)');
+function handleMQ(e){ 
+  document.getElementById('calendar').style.display = e.matches? 'none':'grid'; 
+  document.getElementById('listView').style.display = e.matches? 'grid':'none'; 
+}
+handleMQ(mq); mq.addEventListener('change', handleMQ);
+
+// Add current and upcoming class status
+function updateStatus() {
+  const now = new Date();
+  const d = now.getDay();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const currentTime = hour + minute / 60; // Convert to decimal time
+
+  if (d < 1 || d > 5) {
+    document.getElementById('currentStatus').textContent = 'No Class Now 😴 (Weekend)';
+    document.getElementById('upcomingStatus').textContent = 'Next Week Starts Monday! 📅';
+    return;
+  }
+
+  let currentClass = null;
+  let upcomingClass = null;
+
+  classes.forEach(cls => {
+    if (cls.day === d) {
+      const startHour = parseInt(cls.start.split(':')[0]);
+      const startMinute = parseInt(cls.start.split(':')[1]);
+      const endHour = parseInt(cls.end.split(':')[0]);
+      const endMinute = parseInt(cls.end.split(':')[1]);
+      const startTime = startHour + startMinute / 60;
+      const endTime = endHour + endMinute / 60;
+
+      if (currentTime >= startTime && currentTime < endTime) {
+        currentClass = cls;
+      } else if (currentTime < startTime && (!upcomingClass || startTime < (parseInt(upcomingClass.start.split(':')[0]) + parseInt(upcomingClass.start.split(':')[1]) / 60))) {
+        upcomingClass = cls;
+      }
+    }
+  });
+
+  document.getElementById('currentStatus').textContent = currentClass 
+    ? `Current: ${currentClass.code} • ${currentClass.title} (${currentClass.start}-${currentClass.end})`
+    : 'No Class Now 🎉';
+  document.getElementById('upcomingStatus').textContent = upcomingClass 
+    ? `Upcoming: ${upcomingClass.code} • ${upcomingClass.title} (${upcomingClass.start}-${upcomingClass.end})`
+    : 'No Upcoming Class Today! 🏖️';
+
+  // Highlight current class in calendar
+  const slots = cal.querySelectorAll('.slot');
+  slots.forEach(slot => {
+    slot.classList.remove('current');
+    if (+slot.dataset.day === d) {
+      const slotHour = +slot.dataset.hour;
+      if (currentClass) {
+        const startHour = parseInt(currentClass.start.split(':')[0]);
+        if (slotHour === startHour) slot.classList.add('current');
+      }
+    }
+  });
+}
+
+// Initial status update and set interval to refresh every minute
+updateStatus();
+setInterval(updateStatus, 60000);
+
+// Add CSS for current class highlight
+const style = document.createElement('style');
+style.textContent = `
+  .current .event {
+    border: 3px solid #ff4500;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>
